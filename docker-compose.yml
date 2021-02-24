@@ -1,0 +1,71 @@
+version: '3'
+
+services:
+  # Traefik is a load balancer and reverse-proxy
+  traefik:
+    image: traefik:v2.4
+    # enable web UI (--api.insecure=true) and listen for docker sock (--providers.docker)
+    # command: --api.insecure=true --providers.docker # no config mapped to container
+    ports:
+      # Web UI
+      - 8080:8080
+      # HTTP API
+      - 8090:8090
+    volumes: 
+      # listen for docker on sock
+      - /var/run/docker.sock:/var/run/docker.sock
+      # map config
+      - ./traefik_config:/etc/traefik
+    networks:
+      - traefiktoinfluxdb
+    depends_on:
+      - tsdb
+#    deploy:
+#      mode: replicated
+#      replicas: 1
+#      placement:
+#        constraints:
+#          - node.role==worker
+
+
+  tsdb:
+    image: influxdb
+    command: -config /var/lib/influxdb/influxdb.conf
+    ports:
+      # HTTP API 
+      - 8086:8086
+      # Graphite
+      - 2003:2003
+      # Web UI (deprecated in favor of Chronograf)
+      - 8083:8083
+      - 8089:8089
+    volumes:
+      # mount config file that enables UDP
+      - ./influxdb_config:/var/lib/influxdb
+    networks:
+      - traefiktoinfluxdb
+
+  chronograf:
+    image: chronograf
+    command: --influxdb-url=http://tsdb:8086
+    ports:
+      - 8888:8888 
+    volumes:
+      - ./chronograf_config:/var/lib/chronograf
+    networks:
+      - traefiktoinfluxdb
+    depends_on:
+      - tsdb
+
+  grafana:
+    image: grafana/grafana:5.1.0
+    ports:
+      - 3000:3000
+    networks:
+      - traefiktoinfluxdb
+    volumes:
+      - ./grafana_conf:/conf
+
+
+networks:
+  traefiktoinfluxdb:
