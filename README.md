@@ -14,6 +14,12 @@ Traefik exposed Admin interface:
 Grafana:
 `http://localhost:3000`
 
+User: admin, Password: admin
+
+Set up InfluxDB as source from Grafana admin:
+- Host: http://tsdb:8086
+- No auth required
+
 Simple deploy (recommended):
 `docker-compose up -d` 
 
